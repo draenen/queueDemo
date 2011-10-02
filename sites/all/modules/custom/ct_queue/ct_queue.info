@@ -1,0 +1,6 @@
+name = "CT Queue"
+description = "Drupal 7 Queue Demo"
+core = 7.x
+files[] = ct_queue.module
+files[] = ct_queue.queue.inc
+scripts[] = ct_queue.js

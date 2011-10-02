@@ -1,0 +1,117 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function ct_queue_menu() {
+  $items = array();
+
+  $items['ct-queue/process'] = array(
+    'title' => 'Process Queue',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ct_queue_process_form'),
+    'access callback' => TRUE,
+  );
+
+  return $items;
+}
+
+/**
+ * Form builder: The process queue form.
+ */
+function ct_queue_process_form($form, &$form_state) {
+  // Get the queue.
+  $queue = DrupalQueue::get('ct_queue');
+  $count = $queue->numberOfItems();
+
+  $form = array();
+
+  if (isset($form_state['storage']['cow'])) {
+    $form['markup'] = array(
+      '#type' => 'markup',
+      '#markup' => ct_queue_cowsay($form_state['storage']['cow']),
+    );
+  }
+
+  $form['num'] = array(
+    '#type' => 'markup',
+    '#markup' => t(($count == 1) ? 'There is @count item in the queue.' : 'There are @count items in the queue.', array('@count' => $queue->numberOfItems())),
+  );
+
+  $form['text'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Data'),
+  );
+
+  $form['actions']['add'] = array(
+    '#type' => 'submit',
+    '#value' => t('Add Item'),
+    '#submit' => array('ct_queue_process_form_add_item_submit'),
+  );
+
+  $form['actions']['get'] = array(
+    '#type' => 'submit',
+    '#value' => t('Get Item'),
+    '#submit' => array('ct_queue_process_form_get_item_submit'),
+  );
+
+  return $form;
+}
+
+/**
+ * Submit handler: Add an item.
+ */
+function ct_queue_process_form_add_item_submit($form, &$form_state) {
+  // Get the queue.
+  $queue = DrupalQueue::get('ct_queue');
+
+  // Add the data.
+  $data = array(
+    'value' => $form_state['values']['text'],
+  );
+  $queue->createItem($data);
+}
+
+/**
+ * Submit handler: Get an item.
+ */
+function ct_queue_process_form_get_item_submit($form, &$form_state) {
+  // Get the queue.
+  $queue = DrupalQueue::get('ct_queue');
+
+  // Claim item from the queue.
+  $item = new stdClass();
+  $item = $queue->claimItem();
+  if ($item) {
+    $form_state['storage']['cow'] = $item->data['value'];
+    // Remove the processed item
+    $queue->deleteItem($item);
+  }
+  else {
+    $form_state['storage']['cow'] = t("Nothing left. :(");
+  }
+
+  $form_state['rebuild'] = TRUE;
+}
+
+/**
+ * Helper callback to build markup.
+ */
+function ct_queue_cowsay($text) {
+  //$lines = array();
+  $cmd = strtr('/usr/games/cowsay "@text"', array('@text' => check_plain($text)));
+  $output = '';
+  exec($cmd, $lines);
+  foreach ($lines as $line) {
+    $output .= $line . "\n";
+  }
+
+  $element = array(
+    '#theme' => 'html_tag',
+    '#tag' => 'pre',
+    '#attributes' => array(),
+    '#value' => $output,
+  );
+
+  return render($element);
+}

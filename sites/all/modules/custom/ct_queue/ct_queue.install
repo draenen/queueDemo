@@ -1,0 +1,19 @@
+<?php
+
+/**
+ * Impelments hook_install().
+ */
+function ct_queue_install() {
+  DrupalQueue::get('ct_queue')->createQueue();
+  //variable_set('queue_class_ct_queue_publish_nodes', CtQueuePublishNodes);
+}
+
+/**
+ * Impelemnts hook_uninstall().
+ */
+function ct_queue_uninstall() {
+  //variable_del('queue_class_ct_queue_publish_nodes');
+
+  $queue = DrupalQueue::get('ct_queue');
+  $queue->deleteQueue();
+}
